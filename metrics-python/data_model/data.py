@@ -56,27 +56,27 @@ def aggregate_to_time_series(df,build_alpha,build_beta,_size,_min,_max):
     current_timestamp = df.loc[0]['Timestamp']
     current_array = numpy.zeros(2 * (a_max - a_min + 1))
     for df_index in range(_size):
-        if data_a.loc[set_a_index]['Timestamp'] != current_timestamp:
+        if data_a.loc[df_index]['Timestamp'] != current_timestamp:
             data_stream = data_stream.append([dict(zip(data_stream.columns.values,
-                                                        [current_timestamp]+current_array.tolist()))])
+                                                    [current_timestamp]+current_array.tolist()))])
             #print(data_stream)
             # re-initialize numpy array
             current_array = numpy.zeros(2 * (a_max - a_min + 1))
             # reset timestamp
-            if set_a_index < (len(data_a.index))-1:
-                current_timestamp = data_a.loc[set_a_index+1]['Timestamp']
+            if df_index < _size - 1:
+                current_timestamp = data_a.loc[df_index + 1]['Timestamp']
             # add first value
 
             if current_timestamp == "0:00:03":
                 exit()
         
         # still on same timestamp, add to array
-        print("Time: {2}, Build: {0}, Error Code: {1}".format(data_a.loc[set_a_index]['Build_Version'],
-                                                    data_a.loc[set_a_index]['Error_Code'],
-                                                    data_a.loc[set_a_index]['Timestamp']))
+        print("Time: {2}, Build: {0}, Error Code: {1}".format(data_a.loc[df_index]['Build_Version'],
+                                                    data_a.loc[df_index]['Error_Code'],
+                                                    data_a.loc[df_index]['Timestamp']))
 
-        current_index = indexes[data_a.loc[set_a_index]['Build_Version']] + \
-            (data_a.loc[set_a_index]['Error_Code'] - a_min)
+        current_index = indexes[df.loc[df_index]['Build_Version']] + \
+            (df.loc[df_index]['Error_Code'] - _min)
 
         current_array[current_index] += 1
 
@@ -89,7 +89,7 @@ if __name__ == '__main__':
     # find len of data set and assess cardinality
     a_len, a_max, a_min = analyze_pandas(data_a)
 
-    data_stream = aggregate_to_time_series(data_a,a_len,a_min,a_max)
+    data_stream = aggregate_to_time_series(data_a,build_alpha,build_beta,a_len,a_min,a_max)
         
         
 
