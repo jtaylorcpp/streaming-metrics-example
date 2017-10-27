@@ -1,6 +1,7 @@
 import pandas
 import numpy
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 '''
 Data Munging
@@ -68,7 +69,7 @@ def aggregate_to_time_series(df,build_alpha,build_beta,_size,_min,_max):
             # add first value
 
             if current_timestamp == "0:00:03":
-                exit()
+                return data_stream
         
         # still on same timestamp, add to array
         print("Time: {2}, Build: {0}, Error Code: {1}".format(data_a.loc[df_index]['Build_Version'],
@@ -80,7 +81,28 @@ def aggregate_to_time_series(df,build_alpha,build_beta,_size,_min,_max):
 
         current_array[current_index] += 1
 
+class Heatmap(object):
+    def __init__(self, bin_size=5,current_timestamp="0:00:00"):
+        self.bin_size = [int(bin_size/3600),int(bin_size/60),(bin_size%60)]
+        self.current_timestamp = current_timestamp
+        self.next_timestamp = self.generate_next_timestamp()
 
+    def generate_next_timestamp(self):
+        hr, minu, sec = int(self.current_timestamp[0]), int(self.current_timestamp[2:4]), int(self.current_timestamp[5:])
+        next_hr , next_min, next_sec = hr + self.bin_size[0], minu + self.bin_size[1], sec + self.bin_size[2]
+        next_min, next_sec = next_min + int(next_sec/60), int(next_sec%60)
+        next_hr, next_min = next_hr + int(next_min/60), int(next_min%60) 
+        return "{0}:{1}:{2}".format(str(next_hr).zfill(1),str(next_min).zfill(2),str(next_sec).zfill(2))
+
+    def ingest_record(self,record):
+        pass
+
+    def plot(self):
+        sns.heatmap(self.df, annot=True)
+
+
+
+        
 
 if __name__ == '__main__':
     build_alpha, build_beta = '5.0007.510.011','5.0007.610.011'
@@ -90,14 +112,8 @@ if __name__ == '__main__':
     a_len, a_max, a_min = analyze_pandas(data_a)
 
     data_stream = aggregate_to_time_series(data_a,build_alpha,build_beta,a_len,a_min,a_max)
-        
-        
-
-        #print(current_index,current_array,data_stream.columns.values[current_index])
-
-        
-            
-        
-
-    #print(data_stream.columns.values[1])
-    #print(data_stream.columns.values[indexes[build_beta]])
+    
+    heatmap_5s = Heatmap(bin_size=600)
+    print(heatmap_5s.bin_size)
+    print(heatmap_5s.current_timestamp)
+    print(heatmap_5s.next_timestamp)

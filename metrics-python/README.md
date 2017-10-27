@@ -18,6 +18,16 @@ Design and develop a metrics/monitoring system that is capable of ingesting a st
   * The smallest unit of time is 1 second
   * Multiple records come in every second
 
+### Possible Representations
+
+* Heatmap - diff between current and prev build is color
+
+  * alert on time above certain threshold
+
+* Linegraph - rates of each code comparing current and prev build
+
+  * prolonged time above threshold triggers alert
+
 ## Metrics
 
   * Current thoughts on metrics consist of:
