@@ -48,7 +48,7 @@ def aggregate_to_time_series(df,build_alpha,build_beta,_size,_min,_max):
     # take data, accumulate per second, make table double wide so index is timestamp
     data_stream = pandas.DataFrame(columns=['timestamp']+alpha_columns+beta_columns)
     #print(data_stream)
-    indexes = {'timestamp':0,build_alpha:1,build_beta:(2 + _max + (0-_min))}
+    indices = {'timestamp':0,build_alpha:1,build_beta:(2 + _max + (0-_min))}
     #print(indexes)
 
     #print(len(data_a.index))
@@ -76,30 +76,63 @@ def aggregate_to_time_series(df,build_alpha,build_beta,_size,_min,_max):
                                                     data_a.loc[df_index]['Error_Code'],
                                                     data_a.loc[df_index]['Timestamp']))
 
-        current_index = indexes[df.loc[df_index]['Build_Version']] + \
+        current_index = indices[df.loc[df_index]['Build_Version']] + \
             (df.loc[df_index]['Error_Code'] - _min)
 
         current_array[current_index] += 1
 
 class Heatmap(object):
     def __init__(self, bin_size=5,current_timestamp="0:00:00"):
-        self.bin_size = [int(bin_size/3600),int(bin_size/60),(bin_size%60)]
+        self.bin_size = bin_size
         self.current_timestamp = current_timestamp
-        self.next_timestamp = self.generate_next_timestamp()
+        self.current_timestamp_int = self.timestamp_to_int(self.current_timestamp)
+        self.next_timestamp_int = 0
+        self.generate_next_timestamp()
+
+    def timestamp_to_int(self,timestamp):
+        return (60*60*int(timestamp[0])) + (60*int(timestamp[2:4])) + int(timestamp[5:])
 
     def generate_next_timestamp(self):
-        hr, minu, sec = int(self.current_timestamp[0]), int(self.current_timestamp[2:4]), int(self.current_timestamp[5:])
-        next_hr , next_min, next_sec = hr + self.bin_size[0], minu + self.bin_size[1], sec + self.bin_size[2]
-        next_min, next_sec = next_min + int(next_sec/60), int(next_sec%60)
-        next_hr, next_min = next_hr + int(next_min/60), int(next_min%60) 
-        return "{0}:{1}:{2}".format(str(next_hr).zfill(1),str(next_min).zfill(2),str(next_sec).zfill(2))
+        self.next_timestamp_int += self.bin_size
+
+    def int_timestamp_to_str(self,timestamp_int):
+        _sec  = timestamp_int % 60
+        timestamp_int = int(timestamp_int / 60)
+        _min = timestamp_int % 60
+        timestamp_int = int(timestamp_int / 60)
+        _hr = timestamp_int % 60
+        return "{0}:{1}:{2}".format(str(_hr).zfill(1),str(_min).zfill(2),str(_sec).zfill(2))
+
 
     def ingest_record(self,record):
         pass
 
     def plot(self):
-        sns.heatmap(self.df, annot=True)
+        pass
 
+class DifferentialHeatmap(Heatmap):
+    def __init__(self,df_columns=[],bin_size=5,current_timestamp="0:00:00"):
+        super(DifferentialHeatmap, self).__init__(bin_size, current_timestamp)
+        columns_to_use = df_columns[:int(len(df_columns)/2)+1]
+        columns_to_build = ['_'.join(code.split('_')[1:]) for code in columns_to_use]
+        print(columns_to_build)
+        self.df = pandas.DataFrame(columns=['Timestamp']+columns_to_build)
+
+    def ingest_record(self,record):
+        # record is in format
+        # timestamp, build_a_error_1, 2, 3 ...
+        np_record = record.as_matrix()
+        new_row  = numpy.zeros(len(self.df))
+        print(len(np_record),len(new_row))
+        for index in range(1,len(np_record)):
+            if index <= len(new_row):
+                new_row[index-1] = -1 * np_record[index]
+            else:
+                new_row[index - 1 - len(np_record)] += np_record[index]
+        print(np_record)
+        print(new_row)
+
+        
 
 
         
@@ -113,7 +146,11 @@ if __name__ == '__main__':
 
     data_stream = aggregate_to_time_series(data_a,build_alpha,build_beta,a_len,a_min,a_max)
     
-    heatmap_5s = Heatmap(bin_size=600)
+    print('heatmap test')
+    heatmap_5s = DifferentialHeatmap(df_columns=data_stream.columns.values[1:],bin_size=600)
     print(heatmap_5s.bin_size)
     print(heatmap_5s.current_timestamp)
-    print(heatmap_5s.next_timestamp)
+    print(heatmap_5s.current_timestamp_int,heatmap_5s.int_timestamp_to_str(heatmap_5s.current_timestamp_int))
+    print(heatmap_5s.next_timestamp_int,heatmap_5s.int_timestamp_to_str(heatmap_5s.next_timestamp_int))
+    print(data_stream.loc[0])
+    heatmap_5s.ingest_record(data_stream.loc[0])
