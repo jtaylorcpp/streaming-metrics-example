@@ -42,7 +42,7 @@ def aggregate_to_time_series(df,build_alpha,build_beta,_size,_min,_max):
     alpha_columns = ["{1}_Error_Code_{0}".format(i,build_alpha) for i in range(_min,_max+1)] 
     print(alpha_columns)
 
-    beta_columns = ["{1}_Error_Code_{0}".format(i,build_beta) for i in range(_min,_max)]
+    beta_columns = ["{1}_Error_Code_{0}".format(i,build_beta) for i in range(_min,_max+1)]
     #print(beta_columns)
 
     # take data, accumulate per second, make table double wide so index is timestamp
@@ -57,9 +57,10 @@ def aggregate_to_time_series(df,build_alpha,build_beta,_size,_min,_max):
     current_timestamp = df.loc[0]['Timestamp']
     current_array = numpy.zeros(2 * (a_max - a_min + 1))
     for df_index in range(_size):
-        if data_a.loc[df_index]['Timestamp'] != current_timestamp:
-            data_stream = data_stream.append([dict(zip(data_stream.columns.values,
-                                                    [current_timestamp]+current_array.tolist()))])
+        if df.loc[df_index]['Timestamp'] != current_timestamp:
+            #print(len(data_stream.columns.values))
+            #print(len([current_timestamp]+current_array.tolist()))
+            data_stream.loc[len(data_stream)] = [current_timestamp]+current_array.tolist()
             #print(data_stream)
             # re-initialize numpy array
             current_array = numpy.zeros(2 * (a_max - a_min + 1))
@@ -69,6 +70,7 @@ def aggregate_to_time_series(df,build_alpha,build_beta,_size,_min,_max):
             # add first value
 
             if current_timestamp == "0:00:03":
+                print(data_stream)
                 return data_stream
         
         # still on same timestamp, add to array
@@ -81,7 +83,7 @@ def aggregate_to_time_series(df,build_alpha,build_beta,_size,_min,_max):
 
         current_array[current_index] += 1
 
-class Heatmap(object):
+'''class Heatmap(object):
     def __init__(self, bin_size=5,current_timestamp="0:00:00"):
         self.bin_size = bin_size
         self.current_timestamp = current_timestamp
@@ -131,7 +133,7 @@ class DifferentialHeatmap(Heatmap):
                 new_row[index - 1 - len(np_record)] += np_record[index]
         print(np_record)
         print(new_row)
-
+'''
         
 
 
@@ -146,11 +148,11 @@ if __name__ == '__main__':
 
     data_stream = aggregate_to_time_series(data_a,build_alpha,build_beta,a_len,a_min,a_max)
     
-    print('heatmap test')
+    '''print('heatmap test')
     heatmap_5s = DifferentialHeatmap(df_columns=data_stream.columns.values[1:],bin_size=600)
     print(heatmap_5s.bin_size)
     print(heatmap_5s.current_timestamp)
     print(heatmap_5s.current_timestamp_int,heatmap_5s.int_timestamp_to_str(heatmap_5s.current_timestamp_int))
     print(heatmap_5s.next_timestamp_int,heatmap_5s.int_timestamp_to_str(heatmap_5s.next_timestamp_int))
     print(data_stream.loc[0])
-    heatmap_5s.ingest_record(data_stream.loc[0])
+    heatmap_5s.ingest_record(data_stream.loc[0])'''
