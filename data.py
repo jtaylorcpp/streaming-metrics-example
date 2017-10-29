@@ -29,12 +29,12 @@ def load_data_pandas(path,delim):
 
 
 def analyze_pandas(df):
-    print("Length of Data Set A: {0}".format(len(data_a)))
+    print("Length of Data Set: {0}".format(len(df)))
     idx_max = df['Error_Code'].idxmax()
     idx_min = df['Error_Code'].idxmin()
-    print("Data Set A max: {0}".format(df.loc[idx_max]['Error_Code']))
-    print("Data Set A min: {0}".format(df.loc[idx_min]['Error_Code']))
-    return len(data_a),df.loc[idx_max]['Error_Code'],df.loc[idx_min]['Error_Code']
+    print("Data Set max: {0}".format(df.loc[idx_max]['Error_Code']))
+    print("Data Set min: {0}".format(df.loc[idx_min]['Error_Code']))
+    return len(df),df.loc[idx_max]['Error_Code'],df.loc[idx_min]['Error_Code']
 
 def aggregate_to_time_series(df,build_alpha,build_beta,_size,_min,_max):
     # aggregator
@@ -57,12 +57,12 @@ def aggregate_to_time_series(df,build_alpha,build_beta,_size,_min,_max):
     data_stream = pandas.DataFrame(columns=['timestamp']+alpha_columns+beta_columns)
     
     current_timestamp = df.loc[0]['Timestamp']
-    current_array = numpy.zeros(2 * (a_max - a_min + 1))
+    current_array = numpy.zeros(2 * (_max - _min + 1))
 
     for df_index in range(_size):
         if df.loc[df_index]['Timestamp'] != current_timestamp: 
             data_stream.loc[len(data_stream)] = [current_timestamp]+current_array.tolist()   
-            current_array = numpy.zeros(2 * (a_max - a_min + 1))
+            current_array = numpy.zeros(2 * (_max - _min + 1))
             # reset timestamp only if there is data for bucket
             # i.e. dont build bucket for timestamp 1:00:01 
             #   if there is no data to put in it
@@ -205,7 +205,7 @@ class PercentialHeatmap(Heatmap):
                     #self.df.loc[len(self.df)-1,self.df.columns.values[idx+1]] += (1/self.bin_size) * (np_record[idx + row_size + 1]/numpy.nextafter(0,1))
                     # by comparison, adding 1 is very large as 1 ~= size of bin increase
                     #   if bin is 600 wide, then adding 1 is like having 600 error count
-                    self.df.loc[len(self.df)-1,self.df.columns.values[idx+1]] += 0.05 * self.bin_size
+                    self.df.loc[len(self.df)-1,self.df.columns.values[idx+1]] += 0.01 * self.bin_size
             else:
                 # both numerator and denominator are defined
                 self.df.loc[len(self.df)-1,self.df.columns.values[idx+1]] += (1/self.bin_size) * (np_record[idx + row_size + 1] / np_record[idx + 1])
@@ -227,23 +227,34 @@ class PercentialHeatmap(Heatmap):
                     if self.df.loc[len(self.df)-bin:len(self.df)-1,column].mean() > self.threshold:
                         print(ALERT_STR.format(self.df.loc[len(self.df)-bin,"Timestamp"],self.df.loc[len(self.df)-1,'Timestamp'],
                                                 column,self.threshold,self.df.loc[len(self.df)-bin:len(self.df)-1,column].mean(),
-                                                bin))
+                                                 bin))
+                                            
+    def plot(self):
+        plot_df = self.df.drop(['Timestamp'],axis = 1)
+        plot_df.astype(float)
+        print(plot_df.columns.values)
+        axis = sns.heatmap(plot_df.T, cmap=sns.color_palette("RdYlGn", 100))
+        x_ticks = [x for x in range(len(self.df.loc[:,'Timestamp'].values))]
+        #axis.set_yticks(self.df.columns.values[1:])
+        #axis.set_xticks(self.df.loc[:,'Timestamp'].values)
+        axis.set_xticks(x_ticks)
+        axis.set_xticklabels(self.df.loc[:,'Timestamp'].values) 
+        #axis.set_yticklabels(list(self.df.columns.values[1:])) 
+        sns.color_palette("GnYlRd", 100)
+        plt.show()                                  
 
 
         
 
         
 
-
-        
-
-if __name__ == '__main__':
+def run_example_a(bins=50, threshold=1.25,threshold_bins=[5,10]):
     build_alpha, build_beta = '5.0007.510.011','5.0007.610.011'
     '''
     TEST on ErrorStreamSetA.csv
     '''
     #'''
-    data_a = load_data_pandas('data_model/ErrorStreamSetA.csv','\t')
+    data_a = load_data_pandas('ErrorStreamSetA.csv','\t')
     
     # find len of data set and assess cardinality
     a_len, a_max, a_min = analyze_pandas(data_a)
@@ -251,16 +262,41 @@ if __name__ == '__main__':
     data_stream = aggregate_to_time_series(data_a,build_alpha,build_beta,a_len,a_min,a_max)
     
     print('heatmap test')
-    heatmap_10m = PercentialHeatmap(df_columns=data_stream.columns.values[1:],bin_size=10,threshold_bins=[1,5,10])
+    _heatmap = PercentialHeatmap(df_columns=data_stream.columns.values[1:],bin_size=bins,threshold=threshold, threshold_bins=threshold_bins)
     
     # 'streaming' of data
     for idx in range(len(data_stream)):
-        heatmap_10m.ingest_record(data_stream.loc[idx])
-    print(heatmap_10m.df.T)
+        _heatmap.ingest_record(data_stream.loc[idx])
+    #print(_heatmap.df.T)
+    _heatmap.plot()
     #sns.heatmap(heatmap_5s.df,annot=True)
     #'''
+
+def run_example_b(bins=50, threshold=1.25,threshold_bins=[5,10]):
+    build_alpha, build_beta = '5.0007.510.011','5.0007.610.011'
     '''
-    TEST on ErrorStreamSetB.csv
+    TEST on ErrorStreamSetA.csv
     '''
-    '''
-    '''
+    #'''
+    data_b = load_data_pandas('ErrorStreamSetB.csv',',')
+    
+    # find len of data set and assess cardinality
+    b_len, b_max, b_min = analyze_pandas(data_b)
+
+    data_stream = aggregate_to_time_series(data_b,build_alpha,build_beta,b_len,b_min,b_max)
+    
+    print('heatmap test')
+    _heatmap = PercentialHeatmap(df_columns=data_stream.columns.values[1:],bin_size=bins,threshold=threshold, threshold_bins=threshold_bins)
+    
+    # 'streaming' of data
+    for idx in range(len(data_stream)):
+        _heatmap.ingest_record(data_stream.loc[idx])
+    #print(_heatmap.df.T)
+    _heatmap.plot()
+    #sns.heatmap(heatmap_5s.df,annot=True)
+    #'''
+        
+
+if __name__ == '__main__':
+    #run_example_a(threshold=1.25,threshold_bins=[5,10])
+    run_example_b(threshold=1.25,threshold_bins=[5,10])

@@ -186,5 +186,16 @@ This will look into the Pipfile and Pipfile.lock and install the necessary depen
 
 ### Run examples
 
-By defualt, the code is configured to run against the 
+By default, the code is configured to run against ErrorStreamSetA.csv with:
+
+```
+pipenv run python data.py
+```
+
+If both Python 3 and Python 2 are installed, then run with your Python 3 interpreter (example uses python3):
+
+```
+pipenv run python3 data.py
+```
+
 
