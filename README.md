@@ -219,9 +219,9 @@ if __name__ == '__main__':
 
 Where:
 
-  1. bins: number of time stamps to aggregate where 5 would make [0:00:00 = 0:00:04] 1 bin
+  1. bins: number of time stamps to aggregate where 5 would make [0:00:00 - 0:00:04] 1 bin
 
-  2. threshold: the mean value to be reach to have the system form an alter
+  2. threshold: the mean value to be reached to have the system form an alert
 
   3. threshold_bins: the number of bins to be averages (multiple can be supplied but must be a list)
 
