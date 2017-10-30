@@ -111,6 +111,14 @@ For this example, due to the visualization requirements, a heatmap seemed to be 
 
 A heatmap, on the other hand, only has to have an entry for unique error codes as we can compare build versions and show their relation through color. This allows for each segment of the visualization to convey the relationship between builds and error codes quickly on a time-series axis while also allowing for analysis based on time buckets and not instantaneous time stamps.
 
+Therefore, for each bucket will have samples added in a differential manner. Each row is only added to as records are added into the bucket and the difference between new errors and old errors are added.
+
+```
+heatmap[bucket] += data_stream[new error count] - data_stream[old error count]
+```
+
+This will then have high positive scores for lots of new errors and high negative scores for decreases in erros from the new build.
+
 #### Alerting
 
 Since the basis for alerts in the analysis are over a time series, whcih values are alerted on are also a function of the size of the bin that has been configured.
@@ -197,5 +205,33 @@ If both Python 3 and Python 2 are installed, then run with your Python 3 interpr
 ```
 pipenv run python3 data.py
 ```
+
+Once running, alerts will be printed to the screen as the data is stream. Red regions are regions where there are many more new errors that old errors and green regions for the opposite.
+
+
+In order to tune the alerting and heatmap, the "main" implementations of both the ErrorStreamSetA and ErrorStreamSetB methods parameters can be changed.
+
+```
+if __name__ == '__main__':
+    run_example_a(bins=100,threshold=1.25,threshold_bins=[5,10])
+    run_example_b(bins=30, threshold=1.25,threshold_bins=[5,10])
+```
+
+Where:
+
+  1. bins: number of time stamps to aggregate where 5 would make [0:00:00 = 0:00:04] 1 bin
+
+  2. threshold: the mean value to be reach to have the system form an alter
+
+  3. threshold_bins: the number of bins to be averages (multiple can be supplied but must be a list)
+
+#### Example Histograms
+
+ErrorStreamSetA example heatmap:
+![alt text](ErrorSetATest.png)
+
+ErrorStreamSetB example heatmap:
+![alt text](ErrorSetBTest.png)
+
 
 

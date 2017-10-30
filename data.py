@@ -136,7 +136,7 @@ class Heatmap(object):
         pass
 
 '''
-PercentialHeatmap
+DiffernetialHeatmap
 
 Designed to find percent increase in error codes
     i.e. build_a has 10 errors of type 5
@@ -159,9 +159,9 @@ Alert: Mean Threshold Exceeded
     Bin Size:        {5}
 """
 
-class PercentialHeatmap(Heatmap):
+class DiffernetialHeatmap(Heatmap):
     def __init__(self,df_columns=[],bin_size=5,current_timestamp="0:00:00",threshold=1.25,threshold_bins=[1]):
-        super(PercentialHeatmap, self).__init__(bin_size, current_timestamp,threshold,threshold_bins)
+        super(DiffernetialHeatmap, self).__init__(bin_size, current_timestamp,threshold,threshold_bins)
         columns_to_use = df_columns[:int(len(df_columns)/2)]
         columns_to_build = ['_'.join(code.split('_')[1:]) for code in columns_to_use]
         #print(columns_to_build)
@@ -187,28 +187,11 @@ class PercentialHeatmap(Heatmap):
         
         # 2. update current row
         #   since all records coming in are aggregations of timestamp
-        #   sum average percentages (1/bin_size) * new_error_count / old_error_count
+        #   use differntial analysis new errors - old errors
 
         row_size = len(self.df.loc[len(self.df) - 1]) - 1
         for idx in range(row_size):
-            # if denominator is 0
-            if np_record[idx + 1] == 0 or np_record[idx + 1] == 0.0:
-                # if numerator is 0
-                if np_record[idx + row_size + 1] == 0 or np_record[idx + row_size + 1] == 0.0:
-                    # numerator and denominator are both 0 ~ call this "1"
-                    self.df.loc[len(self.df)-1,self.df.columns.values[idx+1]] += (1/self.bin_size)
-                else:
-                    # numerator is not 0 but denominator is which is undefined
-                    # numpy.nextafter(x,y) gives the smallest float number increment from x -> y
-                    # https://stackoverflow.com/questions/6063755/increment-a-python-floating-point-value-by-the-smallest-possible-amount
-                    # yet this results in inf which is not very helpful
-                    #self.df.loc[len(self.df)-1,self.df.columns.values[idx+1]] += (1/self.bin_size) * (np_record[idx + row_size + 1]/numpy.nextafter(0,1))
-                    # by comparison, adding 1 is very large as 1 ~= size of bin increase
-                    #   if bin is 600 wide, then adding 1 is like having 600 error count
-                    self.df.loc[len(self.df)-1,self.df.columns.values[idx+1]] += 0.01 * self.bin_size
-            else:
-                # both numerator and denominator are defined
-                self.df.loc[len(self.df)-1,self.df.columns.values[idx+1]] += (1/self.bin_size) * (np_record[idx + row_size + 1] / np_record[idx + 1])
+            self.df.loc[len(self.df)-1,self.df.columns.values[idx+1]] += (np_record[idx + row_size + 1] - np_record[idx + 1])
 
     def assess_thresholds(self):
         currents_thresh_bins  = self.threshold_bins
@@ -232,15 +215,16 @@ class PercentialHeatmap(Heatmap):
     def plot(self):
         plot_df = self.df.drop(['Timestamp'],axis = 1)
         plot_df.astype(float)
-        print(plot_df.columns.values)
-        axis = sns.heatmap(plot_df.T, cmap=sns.color_palette("RdYlGn", 100))
+        #print(plot_df.columns.values)
+        color_map = sns.color_palette("RdYlGn", 100)
+        color_map.reverse()
+        axis = sns.heatmap(plot_df.T, cmap=color_map)
+
         x_ticks = [x for x in range(len(self.df.loc[:,'Timestamp'].values))]
-        #axis.set_yticks(self.df.columns.values[1:])
-        #axis.set_xticks(self.df.loc[:,'Timestamp'].values)
+        
         axis.set_xticks(x_ticks)
-        axis.set_xticklabels(self.df.loc[:,'Timestamp'].values) 
-        #axis.set_yticklabels(list(self.df.columns.values[1:])) 
-        sns.color_palette("GnYlRd", 100)
+        axis.set_xticklabels(self.df.loc[:,'Timestamp'].values, rotation=90) 
+       
         plt.show()                                  
 
 
@@ -262,7 +246,7 @@ def run_example_a(bins=50, threshold=1.25,threshold_bins=[5,10]):
     data_stream = aggregate_to_time_series(data_a,build_alpha,build_beta,a_len,a_min,a_max)
     
     print('heatmap test')
-    _heatmap = PercentialHeatmap(df_columns=data_stream.columns.values[1:],bin_size=bins,threshold=threshold, threshold_bins=threshold_bins)
+    _heatmap = DiffernetialHeatmap(df_columns=data_stream.columns.values[1:],bin_size=bins,threshold=threshold, threshold_bins=threshold_bins)
     
     # 'streaming' of data
     for idx in range(len(data_stream)):
@@ -286,7 +270,7 @@ def run_example_b(bins=50, threshold=1.25,threshold_bins=[5,10]):
     data_stream = aggregate_to_time_series(data_b,build_alpha,build_beta,b_len,b_min,b_max)
     
     print('heatmap test')
-    _heatmap = PercentialHeatmap(df_columns=data_stream.columns.values[1:],bin_size=bins,threshold=threshold, threshold_bins=threshold_bins)
+    _heatmap = DiffernetialHeatmap(df_columns=data_stream.columns.values[1:],bin_size=bins,threshold=threshold, threshold_bins=threshold_bins)
     
     # 'streaming' of data
     for idx in range(len(data_stream)):
@@ -295,8 +279,10 @@ def run_example_b(bins=50, threshold=1.25,threshold_bins=[5,10]):
     _heatmap.plot()
     #sns.heatmap(heatmap_5s.df,annot=True)
     #'''
+
+    print(_heatmap.df.loc[_heatmap.df.idxmax()])
         
 
 if __name__ == '__main__':
-    #run_example_a(threshold=1.25,threshold_bins=[5,10])
-    run_example_b(threshold=1.25,threshold_bins=[5,10])
+    run_example_a(bins=50,threshold=6,threshold_bins=[10,20])
+    run_example_b(bins=50, threshold=2,threshold_bins=[5,10])
