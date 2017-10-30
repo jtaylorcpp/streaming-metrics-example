@@ -138,7 +138,7 @@ Alert: Mean Threshold Exceeded
     Threshold:       1.25
 ```
 
-Where, in this example, the threshold is set for a 25% increase in errors (1.25) and averaged over 5 time bins where each bin is 10 seconds. 
+Where, in this example, the threshold is set for a 25% increase in errors (1.25) and averaged over 5 time bins where each bin is 50 seconds. 
 
 ## To Run
 
